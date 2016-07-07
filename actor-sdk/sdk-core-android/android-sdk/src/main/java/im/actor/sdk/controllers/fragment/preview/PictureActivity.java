@@ -1,17 +1,19 @@
 package im.actor.sdk.controllers.fragment.preview;
 
+import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.media.MediaScannerConnection;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
@@ -30,6 +32,9 @@ import com.droidkit.progress.CircularView;
 import java.io.File;
 import java.io.IOException;
 
+import im.actor.core.entity.FileReference;
+import im.actor.core.viewmodel.UserVM;
+import im.actor.runtime.Log;
 import im.actor.sdk.ActorSDK;
 import im.actor.sdk.R;
 import im.actor.sdk.controllers.Intents;
@@ -39,17 +44,17 @@ import im.actor.sdk.util.Randoms;
 import im.actor.sdk.util.Screen;
 import im.actor.sdk.util.images.common.ImageLoadException;
 import im.actor.sdk.util.images.ops.ImageLoading;
-import im.actor.sdk.view.avatar.AvatarView;
 import im.actor.sdk.view.MaterialInterpolator;
-import im.actor.core.entity.FileReference;
-import im.actor.core.viewmodel.UserVM;
+import im.actor.sdk.view.avatar.AvatarView;
 import uk.co.senab.photoview.DefaultOnDoubleTapListener;
 import uk.co.senab.photoview.PhotoViewAttacher;
 
+import static im.actor.sdk.R.id.save;
 import static im.actor.sdk.util.ActorSDKMessenger.users;
 
 public class PictureActivity extends BaseActivity {
 
+    private static final int PERMISSION_REQ_MEDIA = 0;
 
     private static final String ARG_FILE_SIZE = "ARG_FILE_SIZE";
     private static final String ARG_FILE_ACCESS_HASH = "ARG_FILE_ACCESS";
@@ -133,9 +138,8 @@ public class PictureActivity extends BaseActivity {
         fragment = new PictureFragment();
         fragment.setArguments(bundle);
         getSupportFragmentManager().beginTransaction()
-                .add(R.id.container, fragment)
-                .commit();
-
+            .add(R.id.container, fragment)
+            .commit();
 
         Bitmap bitmap = null;
         try {
@@ -147,17 +151,18 @@ public class PictureActivity extends BaseActivity {
             return;
         }
         transitionView.setImageBitmap(bitmap);
-        if (bitmap != null)
+        if (bitmap != null) {
             bitmap = null;
+        }
 
         MediaFullscreenAnimationUtils.animateForward(transitionView, bitmapWidth, bitmapHeight, transitionLeft, transitionTop, transitionWidth, transitionHeight,
-                new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        containerView.setAlpha(1);
-                        transitionView.setAlpha(0f);
-                    }
-                });
+            new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    containerView.setAlpha(1);
+                    transitionView.setAlpha(0f);
+                }
+            });
         MediaFullscreenAnimationUtils.animateBackgroundForward(backgroundView, null);
     }
 
@@ -178,8 +183,8 @@ public class PictureActivity extends BaseActivity {
             @Override
             public void run() {
                 getSupportFragmentManager().beginTransaction()
-                        .remove(fragment)
-                        .commit();
+                    .remove(fragment)
+                    .commit();
                 containerView.setVisibility(View.GONE);
 
 //                Bitmap bitmap;
@@ -191,13 +196,13 @@ public class PictureActivity extends BaseActivity {
 //                }
 
                 MediaFullscreenAnimationUtils.animateBack(transitionView, bitmapWidth, bitmapHeight, transitionLeft, transitionTop, transitionWidth, transitionHeight,
-                        new AnimatorListenerAdapter() {
-                            @Override
-                            public void onAnimationEnd(Animator animation) {
-                                PictureActivity.super.finish();
-                                overridePendingTransition(0, 0);
-                            }
-                        });
+                    new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            PictureActivity.super.finish();
+                            overridePendingTransition(0, 0);
+                        }
+                    });
                 MediaFullscreenAnimationUtils.animateBackgroundBack(backgroundView, null);
             }
         }, 50);
@@ -237,6 +242,7 @@ public class PictureActivity extends BaseActivity {
 
         private ImageView imageView;
         private boolean uiIsHidden = true;
+        private MenuItem saveMenuItem;
         private AvatarView ownerAvatarView;
         private TextView ownerNameView;
         private View ownerContainer;
@@ -284,14 +290,15 @@ public class PictureActivity extends BaseActivity {
             } catch (ImageLoadException e) {
                 e.printStackTrace();
             }
-            if (bitmap != null)
+            if (bitmap != null) {
                 bitmap = null;
+            }
 
             attacher = new PhotoViewAttacher(imageView);
             attacher.setOnDoubleTapListener(new DefaultOnDoubleTapListener(attacher) {
                 @Override
                 public boolean onSingleTapConfirmed(MotionEvent e) {
-                    if (!uiIsHidden) {
+                    if (! uiIsHidden) {
                         hideSystemUi();
                     } else {
                         showSystemUi();
@@ -301,8 +308,9 @@ public class PictureActivity extends BaseActivity {
 
                 @Override
                 public boolean onDoubleTap(MotionEvent e) {
-                    if (!uiIsHidden)
+                    if (! uiIsHidden) {
                         hideSystemUi();
+                    }
                     return super.onDoubleTap(e);
                 }
 
@@ -436,17 +444,18 @@ public class PictureActivity extends BaseActivity {
                 }
             }*/
             backgroundView = rootView.findViewById(R.id.background);
-            if (backgroundView != null)
+            if (backgroundView != null) {
                 backgroundView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if (!uiIsHidden) {
+                        if (! uiIsHidden) {
                             hideSystemUi();
                         } else {
                             showSystemUi();
                         }
                     }
                 });
+            }
 
             ownerContainer.setVisibility(View.GONE);
 
@@ -456,13 +465,15 @@ public class PictureActivity extends BaseActivity {
         @Override
         public void onDestroyView() {
             super.onDestroyView();
-            if (attacher != null)
+            if (attacher != null) {
                 attacher.cleanup();
+            }
         }
 
         @Override
         public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
             inflater.inflate(R.menu.media_picture, menu);
+            saveMenuItem = menu.findItem(R.id.save);
         }
 
         @Override
@@ -473,31 +484,41 @@ public class PictureActivity extends BaseActivity {
                     .setType("image/jpeg")
                     .putExtra(Intent.EXTRA_STREAM,Uri.parse(path)));*/
                 return true;
-            } else if (item.getItemId() == R.id.save) {
-                File externalFile = Environment.getExternalStorageDirectory();
-                if (externalFile == null) {
-                    Toast.makeText(getActivity(), R.string.toast_no_sdcard, Toast.LENGTH_LONG).show();
-                }else{
-                    boolean isGif = path.endsWith(".gif");
-                    String externalPath = externalFile.getAbsolutePath();
-                    String exportPathBase = externalPath + "/" + ActorSDK.sharedActor().getAppName() + "/" + ActorSDK.sharedActor().getAppName() + " images" + "/";
-                    new File(exportPathBase).mkdirs();
-                    try {
-                        String exportPath = exportPathBase + (fileName != null ? fileName : "exported") + "_" + Randoms.randomId() + (isGif ? ".gif" : ".jpg");
-                        Files.copy(new File(this.path), new File(exportPath));
-                        MediaScannerConnection.scanFile(getActivity(), new String[]{exportPath}, new String[]{"image/" + (isGif ? "gif" : "jpeg")}, null);
-                        Toast.makeText(getActivity(), getString(R.string.file_saved)+ " " + exportPath, Toast.LENGTH_LONG).show();
-                        item.setEnabled(false);
-                        item.setTitle(R.string.menu_saved);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-
+            } else if (item.getItemId() == save) {
+                savePicture();
                 return true;
             }
             return super.onOptionsItemSelected(item);
+        }
+
+        private void savePicture() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQ_MEDIA);
+                    Log.d("Permissions", "savePhoto - no permission :c");
+                    return;
+                }
+            }
+
+            File externalFile = Environment.getExternalStorageDirectory();
+            if (externalFile == null) {
+                Toast.makeText(getActivity(), R.string.toast_no_sdcard, Toast.LENGTH_LONG).show();
+            } else {
+                boolean isGif = path.endsWith(".gif");
+                String externalPath = externalFile.getAbsolutePath();
+                String exportPathBase = externalPath + "/" + ActorSDK.sharedActor().getAppName() + "/" + ActorSDK.sharedActor().getAppName() + " images" + "/";
+                new File(exportPathBase).mkdirs();
+                try {
+                    String exportPath = exportPathBase + (fileName != null ? fileName : "exported") + "_" + Randoms.randomId() + (isGif ? ".gif" : ".jpg");
+                    Files.copy(new File(this.path), new File(exportPath));
+                    MediaScannerConnection.scanFile(getActivity(), new String[]{exportPath}, new String[]{"image/" + (isGif ? "gif" : "jpeg")}, null);
+                    Toast.makeText(getActivity(), getString(R.string.file_saved) + " " + exportPath, Toast.LENGTH_LONG).show();
+                    saveMenuItem.setEnabled(false);
+                    saveMenuItem.setTitle(R.string.menu_saved);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         private void showSystemUi() {
@@ -525,68 +546,73 @@ public class PictureActivity extends BaseActivity {
             }
         }
 
+        @Override
+        public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+            if (requestCode == PERMISSION_REQ_MEDIA) {
+                if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    savePicture();
+                }
+            }
+        }
+
         private void syncUiState() {
 
             toolbar.clearAnimation();
             ownerContainer.clearAnimation();
             if (uiIsHidden) {
 
-
                 toolbar.animate()
-                        .setInterpolator(new MaterialInterpolator())
-                        .y(-toolbar.getHeight())
-                        .alpha(0)
-                        .setStartDelay(0)
-                        .setDuration(300 * animationMultiplier)
-                        .start();
+                    .setInterpolator(new MaterialInterpolator())
+                    .y(- toolbar.getHeight())
+                    .alpha(0)
+                    .setStartDelay(0)
+                    .setDuration(300 * animationMultiplier)
+                    .start();
                 ownerContainer.animate()
-                        .setInterpolator(new MaterialInterpolator())
-                        .alpha(0)
-                        .setStartDelay(0)
-                        .setDuration(300 * animationMultiplier)
-                        .start();
+                    .setInterpolator(new MaterialInterpolator())
+                    .alpha(0)
+                    .setStartDelay(0)
+                    .setDuration(300 * animationMultiplier)
+                    .start();
             } else {
                 if (firstShowing) {
                     firstShowing = false;
                     // костыль
                     toolbar.setAlpha(0);
-                    toolbar.setTop(-toolbar.getHeight());
+                    toolbar.setTop(- toolbar.getHeight());
                     ownerContainer.setAlpha(0);
-                    toolbar.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            toolbar.animate()
-                                    .setInterpolator(new MaterialInterpolator())
-                                    .y(0)
-                                    .alpha(1)
-                                    .setStartDelay(50)
-                                    .setDuration(450 * animationMultiplier)
-                                    .start();
-                            ownerContainer.animate()
-                                    .setInterpolator(new MaterialInterpolator())
-                                    .alpha(1)
-                                    .setStartDelay(50)
-                                    .setDuration(450 * animationMultiplier)
-                                    .start();
-                        }
+                    toolbar.post(()->{
+                        toolbar.animate()
+                            .setInterpolator(new MaterialInterpolator())
+                            .y(0)
+                            .alpha(1)
+                            .setStartDelay(50)
+                            .setDuration(450 * animationMultiplier)
+                            .start();
+                        ownerContainer.animate()
+                            .setInterpolator(new MaterialInterpolator())
+                            .alpha(1)
+                            .setStartDelay(50)
+                            .setDuration(450 * animationMultiplier)
+                            .start();
                     });
                     return;
                 }
                 toolbar.animate()
-                        .setInterpolator(new MaterialInterpolator())
-                        .y(0)
-                        .alpha(1)
-                        .setStartDelay(120)
-                        .setDuration(420 * animationMultiplier)
-                        .start();
+                    .setInterpolator(new MaterialInterpolator())
+                    .y(0)
+                    .alpha(1)
+                    .setStartDelay(120)
+                    .setDuration(420 * animationMultiplier)
+                    .start();
                 ownerContainer.animate()
-                        .setInterpolator(new MaterialInterpolator())
-                        .alpha(1)
-                        .setStartDelay(120)
-                        .setDuration(420 * animationMultiplier)
-                        .start();
+                    .setInterpolator(new MaterialInterpolator())
+                    .alpha(1)
+                    .setStartDelay(120)
+                    .setDuration(420 * animationMultiplier)
+                    .start();
             }
-
         }
 
         public static Fragment getInstance(String path, int senderId) {
@@ -607,7 +633,6 @@ public class PictureActivity extends BaseActivity {
             fragment.setArguments(bundle);
             return fragment;
         }
-
 
         public static Fragment getInstance(FileReference ref, int senderId) {
             Bundle bundle = new Bundle();
